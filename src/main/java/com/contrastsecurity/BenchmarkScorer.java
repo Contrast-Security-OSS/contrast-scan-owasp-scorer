@@ -1,6 +1,7 @@
 package com.contrastsecurity;
 
 import com.contrastsecurity.model.OwaspBenchmarkResult;
+import com.contrastsecurity.model.RuleId;
 import com.contrastsecurity.model.UmbrellaBenchmarkResult;
 import com.contrastsecurity.model.UmbrellaBenchmarkResults;
 import com.contrastsecurity.sarif.SarifSchema210;
@@ -12,10 +13,12 @@ import picocli.CommandLine.Option;
 
 
 import java.io.*;
+import java.util.Collections;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Command(name = "benchmark-scorer", mixinStandardHelpOptions = true,
         description = "Score Umbrella against the owasp benchmark")
@@ -118,20 +121,33 @@ public class BenchmarkScorer implements Callable<Integer> {
         int detectedPositives=0;
         for (var e : expected.entrySet()) {
             var v = e.getValue();
+            var ruleId = RuleId.valueOf(v.ruleId());
+            if (ruleId == null) {
+                throw new IllegalStateException("no value exists for [" + v.ruleId() + "]");
+            }
+
             if (v.isVulnerable()) {
                 totalTruePositives++;
                 if (actual.get(v.name()) == null) {
-                    System.out.println(v.name() + ": FAIL: expected a [" + v.ruleId() + "] finding, but didn't get one: False Negative");
-                } else {
-                    System.out.println(v.name() + ": PASS: Found a result!!!: True Positive");
+                    System.out.println(v.name() + ": FAIL: expected a [" + v.ruleId() + ", "+ ruleId.getContrastName() +"] finding, but didn't get one: False Negative");
+
+                } else if (actual.get(v.name(), ruleId.getContrastName()) == null) {
+                    System.out.println(v.name() + ": FAIL: expected a [" + v.ruleId() + ", "+ ruleId.getContrastName() +"] finding, but didn't get one: False Negative. Other rules mistakenly hit howerver. ");
+                }  else {
+                    System.out.println(v.name() + ": PASS: Found a [" + v.ruleId() + "] result!!!: True Positive");
                     detectedPositives++;
                 }
             } else {
                 totalTrueNegatives++;
-                if (actual.get(v.name()) != null) {
-                    System.out.println(v.name() + ": FAIL: Found a result where one was not expected: False Positive");
+                var result = actual.get((v.name()));
+                if (result != null) {
+                    var ruleids = result.values().stream().map((it) -> {return it.ruleId();}).collect(Collectors.toSet());
+                    if (ruleids.size() > 1) {
+                        System.out.println("ERROR: rule ids hit on the wrong test for them.");
+                    }
+                    System.out.println(v.name() + ": FAIL: Found a result of types "+ ruleids +" on test type "+ RuleId.valueOf(v.ruleId()).getContrastName() +" where one was not expected: False Positive");
                 } else {
-                    System.out.println(v.name() + ": PASS: correctly identified True Negative");
+                    System.out.println(v.name() + ": PASS: correctly identified True Negative in [" + v.ruleId() + "] test");
                     detectedNegatives++;
                 }
             }

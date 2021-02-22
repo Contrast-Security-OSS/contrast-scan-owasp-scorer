@@ -40,6 +40,7 @@ public final class UmbrellaBenchmarkResults {
         return results.get(name);
     }
 
+
     public SortedMap<String, Map<String, UmbrellaBenchmarkResult>> getResults() {
         return results;
     }
