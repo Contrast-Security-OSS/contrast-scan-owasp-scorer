@@ -3,14 +3,14 @@ package com.contrastsecurity.model;
 public enum RuleId {
     xss("reflected-xss"),
     trustbound("trust-boundary-violation"),
-    hash("---"),
+    hash("crypto-bad-mac"),
     pathtraver("path-traversal"),
-    crypto("---"),
+    crypto("crypto-bad-ciphers"),
     cmdi("cmd-injection"),
     sqli("sql-injection"),
     ldapi("ldap-injection"),
-    securecookie("---"),
-    weakrand("---"),
+    securecookie("cookie-flags-missing"),
+    weakrand("crypto-weak-randomness"),
     xpathi("xpath-injection");
 
     private final String owaspName;
