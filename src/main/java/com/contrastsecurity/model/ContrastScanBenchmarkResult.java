@@ -3,7 +3,7 @@ package com.contrastsecurity.model;
 import com.google.auto.value.AutoValue;
 
 @AutoValue
-public abstract class UmbrellaBenchmarkResult {
+public abstract class ContrastScanBenchmarkResult {
     public abstract String name();
     public abstract String ruleId();
 
@@ -13,7 +13,7 @@ public abstract class UmbrellaBenchmarkResult {
      */
     public abstract String flowDesc();
 
-    public static UmbrellaBenchmarkResult create(String name, String ruleId, String flowDesc) {
-        return new AutoValue_UmbrellaBenchmarkResult(name, ruleId, flowDesc);
+    public static ContrastScanBenchmarkResult create(String name, String ruleId, String flowDesc) {
+        return new AutoValue_ContrastScanBenchmarkResult(name, ruleId, flowDesc);
     }
 }

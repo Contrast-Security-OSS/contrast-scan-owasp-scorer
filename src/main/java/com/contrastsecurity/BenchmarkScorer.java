@@ -1,9 +1,9 @@
 package com.contrastsecurity;
 
+import com.contrastsecurity.model.ContrastScanBenchmarkResult;
 import com.contrastsecurity.model.OwaspBenchmarkResult;
 import com.contrastsecurity.model.RuleId;
-import com.contrastsecurity.model.UmbrellaBenchmarkResult;
-import com.contrastsecurity.model.UmbrellaBenchmarkResults;
+import com.contrastsecurity.model.ContrastScanBenchmarkResults;
 import com.contrastsecurity.sarif.SarifSchema210;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
@@ -13,7 +13,6 @@ import picocli.CommandLine.Option;
 
 
 import java.io.*;
-import java.util.Collections;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -21,10 +20,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Command(name = "benchmark-scorer", mixinStandardHelpOptions = true,
-        description = "Score Umbrella against the owasp benchmark")
+        description = "Score Contrast Scan against the owasp benchmark")
 public class BenchmarkScorer implements Callable<Integer> {
     private static final String CSV_DELIMITER = ",";
-    private static final Pattern umbrellaNamePattern = Pattern.compile(".*? (BenchmarkTest\\d\\d\\d\\d\\d)\\.java.*");
+    private static final Pattern ResultNamePattern = Pattern.compile(".*? (BenchmarkTest\\d\\d\\d\\d\\d)\\.java.*");
 
     @Parameters(index = "0", paramLabel = "SARIF_FILE", description = "the umnbrella result sarif file.")
     File resultsFile;
@@ -33,11 +32,11 @@ public class BenchmarkScorer implements Callable<Integer> {
 
     public Integer call() throws Exception {
         var actualResults = readActualResults(resultsFile);
-        System.out.println("Read " + actualResults.size() + " actual unique results from Umbrella");
+        System.out.println("Read " + actualResults.size() + " actual unique results from Contrast Scan");
         var expectedResults = readExpectedResults(expectedFile);
         System.out.println("Read " + expectedResults.size() + " expected OWASP Benchmark Results");
 
-        describeUmbrellaResults(actualResults);
+        describeContrastScanResults(actualResults);
         printMatches(actualResults, expectedResults);
 
         return 0;
@@ -51,7 +50,7 @@ public class BenchmarkScorer implements Callable<Integer> {
     private static String extractName(String msg) {
         // extract benchmark name in the form:
         // Found tainted data flow from BenchmarkTest01870.java:100:::{javax.servlet.http.HttpServletResponse}#addCookie({javax.servlet.http.Cookie}) to BenchmarkTest01870.java:101:::{java.io.PrintWriter}#println({java.lang.String})
-        var m = umbrellaNamePattern.matcher(msg);
+        var m = ResultNamePattern.matcher(msg);
         if (!m.matches()) {
             return "NO MATCH";
         }
@@ -78,30 +77,30 @@ public class BenchmarkScorer implements Callable<Integer> {
         return records;
     }
 
-    private static UmbrellaBenchmarkResults readActualResults(File path) throws IOException {
-        var results = new UmbrellaBenchmarkResults();
+    private static ContrastScanBenchmarkResults readActualResults(File path) throws IOException {
+        var results = new ContrastScanBenchmarkResults();
         var objectMapper = new ObjectMapper();
-        SortedMap<String, UmbrellaBenchmarkResult> benchmarkResults = new TreeMap<>();
+        SortedMap<String, ContrastScanBenchmarkResult> benchmarkResults = new TreeMap<>();
         SarifSchema210 sarif = objectMapper.readValue(path, SarifSchema210.class);
         var sarifResults = sarif.getRuns().get(0).getResults();
-        System.out.println("Parsing through " + sarifResults.size() + " Umbrella SARIF result entries");
+        System.out.println("Parsing through " + sarifResults.size() + " Contrast Scan SARIF result entries");
 
         for (var r : sarifResults) {
             var ruleId = r.getRuleId();
             var cf = r.getCodeFlows().get(0);
             var message = cf.getMessage().getText();
             var name = extractName(message);
-            results.put(name, UmbrellaBenchmarkResult.create(name, ruleId, message));
+            results.put(name, ContrastScanBenchmarkResult.create(name, ruleId, message));
         }
 
         return results;
     }
 
     /**
-     * Print various high level statistics about umbrella results.
+     * Print various high level statistics about Contrast Scan results.
      * @param results
      */
-    private static void describeUmbrellaResults(UmbrellaBenchmarkResults results) {
+    private static void describeContrastScanResults(ContrastScanBenchmarkResults results) {
         for (var entry : results.getResults().entrySet()) {
             var r = entry.getValue();
             System.out.println(entry.getKey() + ":");
@@ -113,7 +112,7 @@ public class BenchmarkScorer implements Callable<Integer> {
     }
 
     private static void printMatches(
-            UmbrellaBenchmarkResults actual,
+            ContrastScanBenchmarkResults actual,
             SortedMap<String, OwaspBenchmarkResult> expected) {
         int totalTrueNegatives = 0;
         int detectedNegatives = 0;
