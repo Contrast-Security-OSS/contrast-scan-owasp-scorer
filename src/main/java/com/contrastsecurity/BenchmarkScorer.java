@@ -23,9 +23,9 @@ import java.util.stream.Collectors;
         description = "Score Contrast Scan against the owasp benchmark")
 public class BenchmarkScorer implements Callable<Integer> {
     private static final String CSV_DELIMITER = ",";
-    private static final Pattern ResultNamePattern = Pattern.compile(".*? (BenchmarkTest\\d\\d\\d\\d\\d)\\.java.*");
+    private static final Pattern ResultNamePattern = Pattern.compile("^.*(BenchmarkTest\\d\\d\\d\\d\\d)\\.java$");
 
-    @Parameters(index = "0", paramLabel = "SARIF_FILE", description = "the umnbrella result sarif file.")
+    @Parameters(index = "0", paramLabel = "SARIF_FILE", description = "the umbrella result sarif file.")
     File resultsFile;
     @Parameters(index = "1", paramLabel = "BENCHMARK_CSV", description = "OWASP Benchmark expected results csv")
     File expectedFile;
@@ -47,11 +47,12 @@ public class BenchmarkScorer implements Callable<Integer> {
         System.exit(exitCode);
     }
 
-    private static String extractName(String msg) {
-        // extract benchmark name in the form:
-        // Found tainted data flow from BenchmarkTest01870.java:100:::{javax.servlet.http.HttpServletResponse}#addCookie({javax.servlet.http.Cookie}) to BenchmarkTest01870.java:101:::{java.io.PrintWriter}#println({java.lang.String})
-        var m = ResultNamePattern.matcher(msg);
+    private static String extractName(String uri) {
+        // extract benchmark name from filenaming pattern: BenchmarkTest01870.java
+
+        var m = ResultNamePattern.matcher(uri);
         if (!m.matches()) {
+            System.err.println(String.format("NO MATCH for %s", uri));
             return "NO MATCH";
         }
         var name = m.group(1);
@@ -87,10 +88,12 @@ public class BenchmarkScorer implements Callable<Integer> {
 
         for (var r : sarifResults) {
             var ruleId = r.getRuleId();
-            var cf = r.getCodeFlows().get(0);
-            var message = cf.getMessage().getText();
-            var name = extractName(message);
-            results.put(name, ContrastScanBenchmarkResult.create(name, ruleId, message));
+            var uri = r.getLocations().get(0).getPhysicalLocation().getArtifactLocation().getUri();
+            var name = extractName(uri);
+            results.put(name, ContrastScanBenchmarkResult.create(
+                name,
+                ruleId,
+                r.getLocations().get(0).getPhysicalLocation().getRegion().getSnippet().getText()));
         }
 
         return results;
