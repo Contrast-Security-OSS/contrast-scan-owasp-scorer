@@ -51,7 +51,7 @@
         <versions.sevntu-checkstyle>1.32.0</versions.sevntu-checkstyle>
         <picocli.version>4.5.2</picocli.version>
         <versions.auto-value>1.7.4</versions.auto-value>
-        <jackson.version>2.11.3</jackson.version>
+        <jackson.version>2.22.0</jackson.version>
         <sarif-java.version>1.0</sarif-java.version>
 
         <coveo.goal>format</coveo.goal>
